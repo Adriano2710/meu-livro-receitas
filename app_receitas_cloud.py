@@ -2,160 +2,299 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Chef Digital Cloud", page_icon="🍳", layout="centered")
-st.title("👨‍🍳 Meu Livro de Receitas Cloud")
+# =========================================================
+# CONFIGURAÇÃO DA PÁGINA
+# =========================================================
+st.set_page_config(page_title="Chef Digital Cloud", page_icon="🍳", layout="wide")
+st.title("👨‍🍳 Chef Digital Cloud")
 
-
-# --- AJUSTE PARA MANTER O MENU ATIVO NO CELULAR ---
+# =========================================================
+# CSS PROFISSIONAL
+# =========================================================
 st.markdown("""
-    <style>
-    /* 1. Esconde apenas os botões de configurações e ajuda do topo */
-    [data-testid="stHeader"] {
-        background-color: rgba(0,0,0,0); /* Deixa a barra transparente */
-        color: white;
-    }
-    
-    /* 2. Esconde o menu de hambúrguer padrão do Streamlit (os 3 pontinhos) */
-    #MainMenu {visibility: hidden;}
-    
-    /* 3. Esconde o rodapé */
-    footer {visibility: hidden;}
-    
-    /* 4. Esconde o botão de Deploy se aparecer */
-    .stDeployButton {display: none;}
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+.stDeployButton {display:none;}
+.block-container {padding-top: 2rem;}
+button[kind="secondary"] {
+    width: 100%;
+}
+</style>
+""", unsafe_allow_html=True)
 
-    /* 5. Ajusta o espaço do topo para não ficar um buraco branco */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 1rem;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-# --- CONEXÃO COM GOOGLE SHEETS ---
-# Aqui o Streamlit usa o link que você forneceu
+# =========================================================
+# CONEXÃO GOOGLE SHEETS
+# =========================================================
 URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1hfVSL4PwUk2OdVl4On-xtzzxfdWj5QEj52qsXxYsvgs/edit?usp=sharing"
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+COLUNAS = [
+    "nome",
+    "categoria",
+    "ingredientes",
+    "preparo",
+    "video",
+    "favorito"
+]
+
 def carregar_dados():
     try:
-        # ttl=0 garante que ele busque dados novos toda vez que carregar
-        return conn.read(spreadsheet=URL_PLANILHA, ttl=0)
+        df = conn.read(spreadsheet=URL_PLANILHA, ttl=0)
+        for col in COLUNAS:
+            if col not in df.columns:
+                df[col] = ""
+        return df
     except:
-        return pd.DataFrame(columns=["nome", "categoria", "ingredientes", "preparo", "video"])
+        return pd.DataFrame(columns=COLUNAS)
 
-def salvar_dados(df_atualizado):
-    conn.update(spreadsheet=URL_PLANILHA, data=df_atualizado)
+def salvar_dados(df):
+    conn.update(spreadsheet=URL_PLANILHA, data=df)
 
-# Carregando os dados
 df = carregar_dados()
 
-# --- NAVEGAÇÃO LATERAL ---
+# =========================================================
+# SESSION STATE
+# =========================================================
+if "receita_selecionada" not in st.session_state:
+    st.session_state.receita_selecionada = None
+
+if "modo_edicao" not in st.session_state:
+    st.session_state.modo_edicao = False
+
+# =========================================================
+# SIDEBAR
+# =========================================================
 st.sidebar.title("📌 Navegação")
-menu = st.sidebar.radio("Ir para:", ["Ver Receitas", "Adicionar Nova", "Gerar Lista de Compras"])
+menu = st.sidebar.radio(
+    "Ir para:",
+    ["📖 Ver Receitas", "➕ Nova Receita", "🛒 Lista de Compras"]
+)
 
 LISTA_CATEGORIAS = ["Bolos", "Pães", "Roscas", "Outros"]
 
-# --- LÓGICA: ADICIONAR NOVA ---
-if menu == "Adicionar Nova":
-    st.header("📝 Cadastrar Receita")
-    
+# =========================================================
+# NOVA RECEITA
+# =========================================================
+if menu == "➕ Nova Receita":
+
+    st.header("Cadastrar Nova Receita")
+
     with st.form("nova_receita"):
         nome = st.text_input("Nome da Receita")
         categoria = st.selectbox("Categoria", LISTA_CATEGORIAS)
-        link_video = st.text_input("Link do Vídeo (Insta/TikTok/YouTube)")
-        ingredientes = st.text_area("Ingredientes (um por linha)")
+        video = st.text_input("Link do Vídeo")
+        ingredientes = st.text_area("Ingredientes (1 por linha)")
         preparo = st.text_area("Modo de Preparo")
-        
-        if st.form_submit_button("💾 Salvar na Nuvem"):
+
+        if st.form_submit_button("💾 Salvar Receita"):
+
             if nome and ingredientes:
-                # Criar nova linha no formato de DataFrame
-                nova_linha = pd.DataFrame([{
+
+                nova = pd.DataFrame([{
                     "nome": nome,
                     "categoria": categoria,
-                    "ingredientes": ingredientes, # Mantemos como texto para o Sheets
+                    "ingredientes": ingredientes,
                     "preparo": preparo,
-                    "video": link_video
+                    "video": video,
+                    "favorito": False
                 }])
-                
-                # Adicionar ao DataFrame existente
-                df_final = pd.concat([df, nova_linha], ignore_index=True)
+
+                df_final = pd.concat([df, nova], ignore_index=True)
                 salvar_dados(df_final)
-                st.success(f"Receita '{nome}' salva com sucesso!")
+
+                st.success("Receita salva com sucesso!")
                 st.balloons()
+
             else:
-                st.error("Preencha o nome e os ingredientes!")
+                st.error("Preencha nome e ingredientes!")
 
-# --- LÓGICA: VER RECEITAS ---
-elif menu == "Ver Receitas":
-    st.header("📖 Minhas Receitas")
-    
+# =========================================================
+# VER RECEITAS (PROFISSIONAL)
+# =========================================================
+elif menu == "📖 Ver Receitas":
+
+    st.header("Minhas Receitas")
+
     if df.empty:
-        st.info("O livro está vazio.")
+        st.info("Nenhuma receita cadastrada.")
     else:
-        categorias_existentes = sorted(df['categoria'].unique().tolist())
-        filtro = st.sidebar.multiselect("Filtrar Categoria:", categorias_existentes, default=categorias_existentes)
-        
-        df_filtrado = df[df['categoria'].isin(filtro)]
-        
-        if not df_filtrado.empty:
-            escolha = st.selectbox("Selecione a receita:", df_filtrado['nome'].tolist())
-            rec = df_filtrado[df_filtrado['nome'] == escolha].iloc[0]
-            
-            st.divider()
-            st.subheader(f"{escolha} | ✨ {rec['categoria']}")
-            
-            # Layout otimizado para celular (uma coluna embaixo da outra)
-            st.write("**🛒 Ingredientes:**")
-            for ing in rec['ingredientes'].split('\n'):
-                if ing.strip():
-                    st.write(f"⬜ {ing.strip()}")
-            
-            st.write("**👨‍🍳 Preparo:**")
-            st.info(rec['preparo'])
-            
-            if rec['video']:
-                st.link_button("📺 Ver Vídeo", rec['video'])
-                if "youtube.com" in rec['video'] or "youtu.be" in rec['video']:
-                    st.video(rec['video'])
-            
-            st.divider()
-            if st.button("🗑️ Excluir esta Receita"):
-                df_novo = df[df['nome'] != escolha]
-                salvar_dados(df_novo)
-                st.warning("Receita removida!")
-                st.rerun()
-        else:
-            st.warning("Nenhuma receita encontrada.")
 
-# --- LÓGICA: LISTA DE COMPRAS ---
-elif menu == "Gerar Lista de Compras":
-    st.header("🛒 Gerador de Compras")
+        # FILTROS
+        busca = st.sidebar.text_input("🔎 Buscar receita")
+        somente_favoritos = st.sidebar.checkbox("⭐ Apenas Favoritos")
+
+        categorias = sorted(df["categoria"].dropna().unique())
+        filtro_categoria = st.sidebar.multiselect(
+            "Filtrar Categoria",
+            categorias,
+            default=categorias
+        )
+
+        df_filtrado = df[df["categoria"].isin(filtro_categoria)]
+
+        if busca:
+            df_filtrado = df_filtrado[
+                df_filtrado["nome"].str.contains(busca, case=False, na=False)
+            ]
+
+        if somente_favoritos:
+            df_filtrado = df_filtrado[df_filtrado["favorito"] == True]
+
+        col_lista, col_receita = st.columns([1, 2])
+
+        # =================================================
+        # LISTA CLICÁVEL
+        # =================================================
+        with col_lista:
+            st.subheader("Receitas")
+
+            for _, row in df_filtrado.iterrows():
+
+                label = f"⭐ {row['nome']}" if row["favorito"] else row["nome"]
+
+                if st.button(label, key=row["nome"]):
+                    st.session_state.receita_selecionada = row["nome"]
+                    st.session_state.modo_edicao = False
+
+        # =================================================
+        # EXIBIÇÃO
+        # =================================================
+        with col_receita:
+
+            if st.session_state.receita_selecionada:
+
+                rec = df[df["nome"] == st.session_state.receita_selecionada].iloc[0]
+
+                if not st.session_state.modo_edicao:
+
+                    st.subheader(f"{rec['nome']}  |  {rec['categoria']}")
+                    st.divider()
+
+                    st.markdown("### 🛒 Ingredientes")
+                    for ing in str(rec["ingredientes"]).split("\n"):
+                        if ing.strip():
+                            st.write(f"⬜ {ing.strip()}")
+
+                    st.markdown("### 👨‍🍳 Preparo")
+                    st.info(rec["preparo"])
+
+                    if rec["video"]:
+                        st.link_button("📺 Assistir Vídeo", rec["video"])
+                        if "youtube" in rec["video"]:
+                            st.video(rec["video"])
+
+                    col1, col2, col3 = st.columns(3)
+
+                    # FAVORITO
+                    with col1:
+                        if st.button("⭐ Favoritar / Desfavoritar"):
+                            df.loc[df["nome"] == rec["nome"], "favorito"] = not rec["favorito"]
+                            salvar_dados(df)
+                            st.rerun()
+
+                    # EDITAR
+                    with col2:
+                        if st.button("✏️ Editar"):
+                            st.session_state.modo_edicao = True
+                            st.rerun()
+
+                    # EXCLUIR
+                    with col3:
+                        if st.button("🗑️ Excluir"):
+                            df_novo = df[df["nome"] != rec["nome"]]
+                            salvar_dados(df_novo)
+                            st.session_state.receita_selecionada = None
+                            st.success("Receita excluída!")
+                            st.rerun()
+
+                # =================================================
+                # MODO EDIÇÃO
+                # =================================================
+                else:
+
+                    st.subheader("Editando Receita")
+
+                    with st.form("editar_receita"):
+
+                        novo_nome = st.text_input("Nome", rec["nome"])
+                        nova_categoria = st.selectbox(
+                            "Categoria",
+                            LISTA_CATEGORIAS,
+                            index=LISTA_CATEGORIAS.index(rec["categoria"])
+                        )
+                        novo_video = st.text_input("Vídeo", rec["video"])
+                        novos_ingredientes = st.text_area("Ingredientes", rec["ingredientes"])
+                        novo_preparo = st.text_area("Preparo", rec["preparo"])
+
+                        col_salvar, col_cancelar = st.columns(2)
+
+                        salvar_btn = col_salvar.form_submit_button("💾 Salvar")
+                        cancelar_btn = col_cancelar.form_submit_button("Cancelar")
+
+                        if salvar_btn:
+
+                            df.loc[df["nome"] == rec["nome"]] = [
+                                novo_nome,
+                                nova_categoria,
+                                novos_ingredientes,
+                                novo_preparo,
+                                novo_video,
+                                rec["favorito"]
+                            ]
+
+                            salvar_dados(df)
+
+                            st.session_state.modo_edicao = False
+                            st.session_state.receita_selecionada = novo_nome
+
+                            st.success("Receita atualizada!")
+                            st.rerun()
+
+                        if cancelar_btn:
+                            st.session_state.modo_edicao = False
+                            st.rerun()
+
+# =========================================================
+# LISTA DE COMPRAS
+# =========================================================
+elif menu == "🛒 Lista de Compras":
+
+    st.header("Gerador de Lista de Compras")
+
     if df.empty:
         st.info("Adicione receitas primeiro.")
     else:
+
         selecionadas = []
-        for r in df['nome'].tolist():
-            if st.checkbox(r, key=f"check_{r}"):
-                selecionadas.append(r)
-        
+
+        for nome in df["nome"]:
+            if st.checkbox(nome):
+                selecionadas.append(nome)
+
         if selecionadas:
-            st.subheader("📋 Sua Lista:")
-            todas_linhas = df[df['nome'].isin(selecionadas)]
-            
+
+            receitas = df[df["nome"].isin(selecionadas)]
+
             lista_total = []
-            for ing_texto in todas_linhas['ingredientes']:
-                lista_total.extend(ing_texto.split('\n'))
-            
-            lista_limpa = sorted(list(set([i.strip().capitalize() for i in lista_total if i.strip()])))
-            
-            texto_lista = ""
+            for texto in receitas["ingredientes"]:
+                lista_total.extend(str(texto).split("\n"))
+
+            lista_limpa = sorted(
+                list(set([i.strip().capitalize() for i in lista_total if i.strip()]))
+            )
+
+            st.subheader("Sua Lista Final")
+
+            texto_download = ""
+
             for item in lista_limpa:
                 st.write(f"⬜ {item}")
-                texto_lista += f"- {item}\n"
-            
+                texto_download += f"- {item}\n"
 
-            st.download_button("📩 Baixar Lista em TXT", texto_lista, "lista_compras.txt")
-
-
+            st.download_button(
+                "📥 Baixar Lista",
+                texto_download,
+                "lista_compras.txt"
+            )
