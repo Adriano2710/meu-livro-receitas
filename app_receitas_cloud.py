@@ -7,38 +7,31 @@ st.set_page_config(page_title="Chef Digital Cloud", page_icon="🍳", layout="ce
 st.title("👨‍🍳 Meu Livro de Receitas Cloud")
 
 
-# --- DISFARCE DE APP (CSS ADAPTADO PARA VERSÕES NOVAS) ---
+# --- AJUSTE PARA MANTER O MENU ATIVO NO CELULAR ---
 st.markdown("""
     <style>
-    /* Esconde o cabeçalho/barra superior */
+    /* 1. Esconde apenas os botões de configurações e ajuda do topo */
     [data-testid="stHeader"] {
-        display: none;
+        background-color: rgba(0,0,0,0); /* Deixa a barra transparente */
+        color: white;
     }
     
-    /* Esconde o menu de opções (hambúrguer) */
-    #MainMenu {
-        visibility: hidden;
-    }
+    /* 2. Esconde o menu de hambúrguer padrão do Streamlit (os 3 pontinhos) */
+    #MainMenu {visibility: hidden;}
     
-    /* Esconde o rodapé 'Made with Streamlit' */
-    footer {
-        visibility: hidden;
-    }
+    /* 3. Esconde o rodapé */
+    footer {visibility: hidden;}
     
-    /* Remove o padding (espaço branco) do topo para o conteúdo subir */
-    .block-container {
-        padding-top: 0rem;
-        padding-bottom: 0rem;
-        margin-top: -50px; /* Força o conteúdo para cima */
-    }
+    /* 4. Esconde o botão de Deploy se aparecer */
+    .stDeployButton {display: none;}
 
-    /* Esconde botões extras de deploy se aparecerem */
-    .stDeployButton {
-        display: none;
+    /* 5. Ajusta o espaço do topo para não ficar um buraco branco */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 1rem;
     }
     </style>
     """, unsafe_allow_html=True)
-
 # --- CONEXÃO COM GOOGLE SHEETS ---
 # Aqui o Streamlit usa o link que você forneceu
 URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1hfVSL4PwUk2OdVl4On-xtzzxfdWj5QEj52qsXxYsvgs/edit?usp=sharing"
@@ -164,4 +157,5 @@ elif menu == "Gerar Lista de Compras":
             
 
             st.download_button("📩 Baixar Lista em TXT", texto_lista, "lista_compras.txt")
+
 
