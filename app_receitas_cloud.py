@@ -7,18 +7,34 @@ st.set_page_config(page_title="Chef Digital Cloud", page_icon="🍳", layout="ce
 st.title("👨‍🍳 Meu Livro de Receitas Cloud")
 
 
-# Adicione isso logo abaixo do seu st.title()
+# --- DISFARCE DE APP (CSS ADAPTADO PARA VERSÕES NOVAS) ---
 st.markdown("""
     <style>
-    /* Esconde botões de desenvolvedor e rodapé */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* Esconde o cabeçalho/barra superior */
+    [data-testid="stHeader"] {
+        display: none;
+    }
     
-    /* Remove espaços vazios no topo para o app preencher a tela */
+    /* Esconde o menu de opções (hambúrguer) */
+    #MainMenu {
+        visibility: hidden;
+    }
+    
+    /* Esconde o rodapé 'Made with Streamlit' */
+    footer {
+        visibility: hidden;
+    }
+    
+    /* Remove o padding (espaço branco) do topo para o conteúdo subir */
     .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
+        padding-top: 0rem;
+        padding-bottom: 0rem;
+        margin-top: -50px; /* Força o conteúdo para cima */
+    }
+
+    /* Esconde botões extras de deploy se aparecerem */
+    .stDeployButton {
+        display: none;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -148,3 +164,4 @@ elif menu == "Gerar Lista de Compras":
             
 
             st.download_button("📩 Baixar Lista em TXT", texto_lista, "lista_compras.txt")
+
