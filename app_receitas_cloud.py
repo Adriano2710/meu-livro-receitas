@@ -6,6 +6,23 @@ import pandas as pd
 st.set_page_config(page_title="Chef Digital Cloud", page_icon="🍳", layout="centered")
 st.title("👨‍🍳 Meu Livro de Receitas Cloud")
 
+
+# Adicione isso logo abaixo do seu st.title()
+st.markdown("""
+    <style>
+    /* Esconde botões de desenvolvedor e rodapé */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Remove espaços vazios no topo para o app preencher a tela */
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # --- CONEXÃO COM GOOGLE SHEETS ---
 # Aqui o Streamlit usa o link que você forneceu
 URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1hfVSL4PwUk2OdVl4On-xtzzxfdWj5QEj52qsXxYsvgs/edit?usp=sharing"
@@ -129,4 +146,5 @@ elif menu == "Gerar Lista de Compras":
                 st.write(f"⬜ {item}")
                 texto_lista += f"- {item}\n"
             
+
             st.download_button("📩 Baixar Lista em TXT", texto_lista, "lista_compras.txt")
